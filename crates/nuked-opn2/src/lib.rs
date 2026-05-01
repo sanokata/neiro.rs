@@ -4,6 +4,7 @@
 //! Original C implementation by nukeykt.
 
 pub mod chip;
+pub mod ffi;
 
 pub use chip::Ym3438;
 
