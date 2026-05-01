@@ -24,15 +24,15 @@
 ```mermaid
 graph TD
     subgraph Input
-        A[MIDIモチーフ]
-        B[.neiro.toml]
-        C[FMパッチファイル]
-        D[ドラム/SE定義TOML]
+        A["MIDIモチーフ"]
+        B[".neiro.toml"]
+        C["FMパッチファイル"]
+        D["ドラム/SE定義TOML"]
     end
 
     subgraph Core Engine
-        E[Composer Engine]
-        G[Synthesis Engine]
+        E["Composer Engine"]
+        G["Synthesis Engine"]
     end
 
     E -- "演奏イベント(Internal)" --> G
@@ -42,8 +42,8 @@ graph TD
     C --> G
 
     subgraph Output
-        G --> H[WAVファイル]
-        E --> I[MIDIファイル (オプション)]
+        G --> H["WAVファイル"]
+        E --> I["MIDIファイル (オプション)"]
     end
 ```
 
