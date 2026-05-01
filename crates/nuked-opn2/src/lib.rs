@@ -5,6 +5,8 @@
 
 pub mod chip;
 pub mod ffi;
+#[cfg(test)]
+mod tests;
 
 pub use chip::Ym3438;
 
