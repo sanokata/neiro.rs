@@ -5,6 +5,7 @@
 
 pub mod chip;
 pub mod ffi;
+pub mod tables;
 #[cfg(test)]
 mod tests;
 
