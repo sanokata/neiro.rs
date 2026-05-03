@@ -1,4 +1,3 @@
-#[cfg(test)]
 mod tests {
     use crate::chip::Ym3438;
     use crate::ffi::*;

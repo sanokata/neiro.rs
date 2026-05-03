@@ -1425,3 +1425,17 @@ Bit8u OPN2_Read(ym3438_t *chip, Bit32u port)
     }
     return 0;
 }
+
+/* Table accessors for Rust comparison tests */
+Bit16u OPN2_GetLogsinRom(Bit32u i)                        { return logsinrom[i]; }
+Bit16u OPN2_GetExpRom(Bit32u i)                           { return exprom[i]; }
+Bit32u OPN2_GetFnNote(Bit32u i)                           { return fn_note[i]; }
+Bit32u OPN2_GetEgStephi(Bit32u row, Bit32u col)           { return eg_stephi[row][col]; }
+Bit8u  OPN2_GetEgAmShift(Bit32u i)                        { return eg_am_shift[i]; }
+Bit32u OPN2_GetPgDetune(Bit32u i)                         { return pg_detune[i]; }
+Bit32u OPN2_GetPgLfoSh1(Bit32u row, Bit32u col)           { return pg_lfo_sh1[row][col]; }
+Bit32u OPN2_GetPgLfoSh2(Bit32u row, Bit32u col)           { return pg_lfo_sh2[row][col]; }
+Bit32u OPN2_GetOpOffset(Bit32u i)                         { return op_offset[i]; }
+Bit32u OPN2_GetChOffset(Bit32u i)                         { return ch_offset[i]; }
+Bit32u OPN2_GetLfoCycles(Bit32u i)                        { return lfo_cycles[i]; }
+Bit32u OPN2_GetFmAlgorithm(Bit32u src, Bit32u row, Bit32u slot) { return fm_algorithm[src][row][slot]; }

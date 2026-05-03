@@ -4,9 +4,11 @@
 //! Original C implementation by nukeykt.
 
 pub mod chip;
+#[cfg(feature = "c-reference")]
 pub mod ffi;
+pub mod opn2;
 pub mod tables;
-#[cfg(test)]
+#[cfg(all(test, feature = "c-reference"))]
 mod tests;
 
 pub use chip::Ym3438;

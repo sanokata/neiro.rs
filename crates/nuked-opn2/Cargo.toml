@@ -6,6 +6,9 @@ authors = ["tetsuo.fujii"]
 description = "Pure Rust port of Nuked-OPN2 (Non-official)"
 license = "MIT OR Apache-2.0"
 
+[features]
+c-reference = []
+
 [dependencies]
 
 [build-dependencies]

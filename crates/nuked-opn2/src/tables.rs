@@ -156,8 +156,8 @@ pub(crate) const CH_OFFSET: [u32; 6] = [
 // LFO cycle lengths for each frequency setting
 pub(crate) const LFO_CYCLES: [u32; 8] = [108, 77, 71, 67, 62, 44, 8, 5];
 
-// FM algorithm routing table [algo][source][operator]
-// Sources: OP1_0, OP1_1, OP2, LastOp, LastOp, Out
+// FM algorithm routing table [data_src][row][slot]
+// Rows: OP1_0, OP1_1, OP2, LastOp, LastOp, Out
 pub(crate) const FM_ALGORITHM: [[[u32; 8]; 6]; 4] = [
     [
         [1, 1, 1, 1, 1, 1, 1, 1], // OP1_0
@@ -192,3 +192,289 @@ pub(crate) const FM_ALGORITHM: [[[u32; 8]; 6]; 4] = [
         [1, 1, 1, 1, 1, 1, 1, 1], // Out
     ],
 ];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mode_constants() {
+        assert_eq!(MODE_YM2612, 0x01);
+        assert_eq!(MODE_READMODE, 0x02);
+        // 独立したビットフラグであること
+        assert_eq!(MODE_YM2612 & MODE_READMODE, 0);
+    }
+
+    #[test]
+    fn eg_num_discriminants() {
+        assert_eq!(EgNum::Attack as u8, 0);
+        assert_eq!(EgNum::Decay as u8, 1);
+        assert_eq!(EgNum::Sustain as u8, 2);
+        assert_eq!(EgNum::Release as u8, 3);
+    }
+
+    #[test]
+    fn logsin_rom_length_and_bounds() {
+        assert_eq!(LOGSIN_ROM.len(), 256);
+        assert_eq!(LOGSIN_ROM[0], 0x859);   // sin(0) → 最大減衰
+        assert_eq!(LOGSIN_ROM[255], 0x000); // sin(π/2) → 減衰なし
+    }
+
+    #[test]
+    fn logsin_rom_monotone_nonincreasing() {
+        // sin が 0→π/2 に向かって増加するため logsin は単調非増加
+        for i in 1..LOGSIN_ROM.len() {
+            assert!(
+                LOGSIN_ROM[i] <= LOGSIN_ROM[i - 1],
+                "LOGSIN_ROM[{i}]={} > LOGSIN_ROM[{}]={}",
+                LOGSIN_ROM[i], i - 1, LOGSIN_ROM[i - 1]
+            );
+        }
+    }
+
+    #[test]
+    fn exp_rom_length_and_bounds() {
+        assert_eq!(EXP_ROM.len(), 256);
+        assert_eq!(EXP_ROM[0], 0x000);
+        assert_eq!(EXP_ROM[255], 0x3fa);
+    }
+
+    #[test]
+    fn exp_rom_monotone_nondecreasing() {
+        for i in 1..EXP_ROM.len() {
+            assert!(
+                EXP_ROM[i] >= EXP_ROM[i - 1],
+                "EXP_ROM[{i}]={} < EXP_ROM[{}]={}",
+                EXP_ROM[i], i - 1, EXP_ROM[i - 1]
+            );
+        }
+    }
+
+    #[test]
+    fn fn_note_threshold_at_7() {
+        // インデックス 0–6 は 0、7 以降は 1 以上
+        for i in 0..7 {
+            assert_eq!(FN_NOTE[i], 0, "FN_NOTE[{i}] should be 0");
+        }
+        assert_eq!(FN_NOTE[7], 1);
+        assert_eq!(FN_NOTE[15], 3);
+    }
+
+    #[test]
+    fn eg_stephi_dimensions_and_values() {
+        assert_eq!(EG_STEPHI.len(), 4);
+        assert_eq!(EG_STEPHI[0], [0, 0, 0, 0]); // rate_low=0: 常にステップなし
+        assert_eq!(EG_STEPHI[3], [1, 1, 1, 0]); // rate_low=3: 最多ステップ
+    }
+
+    #[test]
+    fn eg_am_shift_values() {
+        assert_eq!(EG_AM_SHIFT, [7, 3, 1, 0]);
+        // 感度が上がるにつれシフト量が減少（振れ幅が大きくなる）
+        for i in 1..EG_AM_SHIFT.len() {
+            assert!(EG_AM_SHIFT[i] < EG_AM_SHIFT[i - 1]);
+        }
+    }
+
+    #[test]
+    fn pg_detune_values() {
+        assert_eq!(PG_DETUNE, [16, 17, 19, 20, 22, 24, 27, 29]);
+        // 単調増加
+        for i in 1..PG_DETUNE.len() {
+            assert!(PG_DETUNE[i] > PG_DETUNE[i - 1]);
+        }
+    }
+
+    #[test]
+    fn pg_lfo_sh_dimensions() {
+        assert_eq!(PG_LFO_SH1.len(), 8);
+        assert_eq!(PG_LFO_SH1[0].len(), 8);
+        assert_eq!(PG_LFO_SH2.len(), 8);
+        assert_eq!(PG_LFO_SH2[0].len(), 8);
+        // LFO 無効時 (freq=0) は全スロット最大シフト
+        assert!(PG_LFO_SH1[0].iter().all(|&v| v == 7));
+        assert!(PG_LFO_SH2[0].iter().all(|&v| v == 7));
+    }
+
+    #[test]
+    fn op_offset_bank_boundaries() {
+        assert_eq!(OP_OFFSET.len(), 12);
+        // Ch1–3 は bank 0 (< 0x100)、Ch4–6 は bank 1 (>= 0x100)
+        for &off in &OP_OFFSET[0..3] {
+            assert!(off < 0x100, "Ch1-3 OP1/2 should be in bank 0");
+        }
+        for &off in &OP_OFFSET[3..6] {
+            assert!(off >= 0x100, "Ch4-6 OP1/2 should be in bank 1");
+        }
+        for &off in &OP_OFFSET[6..9] {
+            assert!(off < 0x100, "Ch1-3 OP3/4 should be in bank 0");
+        }
+        for &off in &OP_OFFSET[9..12] {
+            assert!(off >= 0x100, "Ch4-6 OP3/4 should be in bank 1");
+        }
+    }
+
+    #[test]
+    fn ch_offset_bank_boundaries() {
+        assert_eq!(CH_OFFSET.len(), 6);
+        for &off in &CH_OFFSET[0..3] {
+            assert!(off < 0x100, "Ch1-3 should be in bank 0");
+        }
+        for &off in &CH_OFFSET[3..6] {
+            assert!(off >= 0x100, "Ch4-6 should be in bank 1");
+        }
+    }
+
+    #[test]
+    fn lfo_cycles_decreasing() {
+        assert_eq!(LFO_CYCLES.len(), 8);
+        // 周波数設定が上がるにつれサイクル長は短くなる
+        for i in 1..LFO_CYCLES.len() {
+            assert!(
+                LFO_CYCLES[i] < LFO_CYCLES[i - 1],
+                "LFO_CYCLES[{i}]={} should be < LFO_CYCLES[{}]={}",
+                LFO_CYCLES[i], i - 1, LFO_CYCLES[i - 1]
+            );
+        }
+    }
+
+    #[test]
+    fn fm_algorithm_dimensions() {
+        assert_eq!(FM_ALGORITHM.len(), 4);
+        assert_eq!(FM_ALGORITHM[0].len(), 6);
+        assert_eq!(FM_ALGORITHM[0][0].len(), 8);
+    }
+
+    #[test]
+    fn fm_algorithm_out_row() {
+        // Out行 (row 5) のパターン: data_src=0 はスロット7のみ出力
+        assert_eq!(FM_ALGORITHM[0][5], [0, 0, 0, 0, 0, 0, 0, 1]);
+        // data_src=3 は全スロット出力 (最多出力パターン)
+        assert!(FM_ALGORITHM[3][5].iter().all(|&v| v == 1));
+    }
+
+    // C リファレンス比較テスト
+    #[cfg(feature = "c-reference")]
+    mod c_reference {
+        use super::super::*;
+        use crate::ffi::*;
+
+        #[test]
+        fn logsin_rom_matches_c() {
+            for i in 0..256u32 {
+                let rust = LOGSIN_ROM[i as usize];
+                let c = unsafe { OPN2_GetLogsinRom(i) };
+                assert_eq!(rust, c, "LOGSIN_ROM[{i}]: rust={rust:#x} c={c:#x}");
+            }
+        }
+
+        #[test]
+        fn exp_rom_matches_c() {
+            for i in 0..256u32 {
+                let rust = EXP_ROM[i as usize];
+                let c = unsafe { OPN2_GetExpRom(i) };
+                assert_eq!(rust, c, "EXP_ROM[{i}]: rust={rust:#x} c={c:#x}");
+            }
+        }
+
+        #[test]
+        fn fn_note_matches_c() {
+            for i in 0..16u32 {
+                let rust = FN_NOTE[i as usize];
+                let c = unsafe { OPN2_GetFnNote(i) };
+                assert_eq!(rust, c, "FN_NOTE[{i}]");
+            }
+        }
+
+        #[test]
+        fn eg_stephi_matches_c() {
+            for row in 0..4u32 {
+                for col in 0..4u32 {
+                    let rust = EG_STEPHI[row as usize][col as usize];
+                    let c = unsafe { OPN2_GetEgStephi(row, col) };
+                    assert_eq!(rust, c, "EG_STEPHI[{row}][{col}]");
+                }
+            }
+        }
+
+        #[test]
+        fn eg_am_shift_matches_c() {
+            for i in 0..4u32 {
+                let rust = EG_AM_SHIFT[i as usize];
+                let c = unsafe { OPN2_GetEgAmShift(i) };
+                assert_eq!(rust, c, "EG_AM_SHIFT[{i}]");
+            }
+        }
+
+        #[test]
+        fn pg_detune_matches_c() {
+            for i in 0..8u32 {
+                let rust = PG_DETUNE[i as usize];
+                let c = unsafe { OPN2_GetPgDetune(i) };
+                assert_eq!(rust, c, "PG_DETUNE[{i}]");
+            }
+        }
+
+        #[test]
+        fn pg_lfo_sh1_matches_c() {
+            for row in 0..8u32 {
+                for col in 0..8u32 {
+                    let rust = PG_LFO_SH1[row as usize][col as usize];
+                    let c = unsafe { OPN2_GetPgLfoSh1(row, col) };
+                    assert_eq!(rust, c, "PG_LFO_SH1[{row}][{col}]");
+                }
+            }
+        }
+
+        #[test]
+        fn pg_lfo_sh2_matches_c() {
+            for row in 0..8u32 {
+                for col in 0..8u32 {
+                    let rust = PG_LFO_SH2[row as usize][col as usize];
+                    let c = unsafe { OPN2_GetPgLfoSh2(row, col) };
+                    assert_eq!(rust, c, "PG_LFO_SH2[{row}][{col}]");
+                }
+            }
+        }
+
+        #[test]
+        fn op_offset_matches_c() {
+            for i in 0..12u32 {
+                let rust = OP_OFFSET[i as usize];
+                let c = unsafe { OPN2_GetOpOffset(i) };
+                assert_eq!(rust, c, "OP_OFFSET[{i}]");
+            }
+        }
+
+        #[test]
+        fn ch_offset_matches_c() {
+            for i in 0..6u32 {
+                let rust = CH_OFFSET[i as usize];
+                let c = unsafe { OPN2_GetChOffset(i) };
+                assert_eq!(rust, c, "CH_OFFSET[{i}]");
+            }
+        }
+
+        #[test]
+        fn lfo_cycles_matches_c() {
+            for i in 0..8u32 {
+                let rust = LFO_CYCLES[i as usize];
+                let c = unsafe { OPN2_GetLfoCycles(i) };
+                assert_eq!(rust, c, "LFO_CYCLES[{i}]");
+            }
+        }
+
+        #[test]
+        fn fm_algorithm_matches_c() {
+            for src in 0..4u32 {
+                for row in 0..6u32 {
+                    for slot in 0..8u32 {
+                        let rust = FM_ALGORITHM[src as usize][row as usize][slot as usize];
+                        let c = unsafe { OPN2_GetFmAlgorithm(src, row, slot) };
+                        assert_eq!(rust, c, "FM_ALGORITHM[{src}][{row}][{slot}]");
+                    }
+                }
+            }
+        }
+    }
+}
