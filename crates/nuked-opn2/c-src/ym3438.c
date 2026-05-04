@@ -1439,3 +1439,6 @@ Bit32u OPN2_GetOpOffset(Bit32u i)                         { return op_offset[i];
 Bit32u OPN2_GetChOffset(Bit32u i)                         { return ch_offset[i]; }
 Bit32u OPN2_GetLfoCycles(Bit32u i)                        { return lfo_cycles[i]; }
 Bit32u OPN2_GetFmAlgorithm(Bit32u src, Bit32u row, Bit32u slot) { return fm_algorithm[src][row][slot]; }
+
+/* Function accessor for Rust comparison tests */
+void OPN2_DoRegWriteTest(ym3438_t *chip) { OPN2_DoRegWrite(chip); }

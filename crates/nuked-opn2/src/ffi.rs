@@ -13,6 +13,9 @@ extern "C" {
     pub fn OPN2_ReadIRQPin(chip: *mut Ym3438) -> u32;
     pub fn OPN2_Read(chip: *mut Ym3438, port: u32) -> u8;
 
+    // Function accessor for comparison tests
+    pub fn OPN2_DoRegWriteTest(chip: *mut Ym3438);
+
     // Table accessors for comparison tests
     pub fn OPN2_GetLogsinRom(i: u32) -> u16;
     pub fn OPN2_GetExpRom(i: u32) -> u16;
